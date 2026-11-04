@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.paulhoward</groupId>
+        <artifactId>aeron-singlestore-direct</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>connector</artifactId>
+    <name>Sequencer gateway: Kafka Connect source connector</name>
+    <description>Kafka Connect source connector that runs in SingleStore Connector Pipelines or a Kafka Connect worker.</description>
+
+    <properties>
+        <!-- Empty for the open-source build; "-aeron-sequencer" for the work build. -->
+        <connector.flavour/>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.paulhoward</groupId>
+            <artifactId>gateway-api</artifactId>
+        </dependency>
+        <!-- Provided by SingleStore Connector Pipelines and by every Kafka Connect worker. -->
+        <dependency>
+            <groupId>org.apache.kafka</groupId>
+            <artifactId>connect-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/version.properties</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes>
+                    <exclude>**/version.properties</exclude>
+                </excludes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>aeron-singlestore-connector-${project.version}${connector.flavour}</finalName>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.apache.kafka:*</exclude>
+                                    <exclude>org.slf4j:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>module-info.class</exclude>
+                                        <exclude>META-INF/versions/*/module-info.class</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                            </transformers>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <profiles>
+        <!-- Default: bundle the open-source Aeron Cluster reader. -->
+        <profile>
+            <id>aeron-cluster</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <dependencies>
+                <dependency>
+                    <groupId>com.paulhoward</groupId>
+                    <artifactId>gateway-aeron-cluster</artifactId>
+                </dependency>
+                <dependency>
+                    <groupId>com.paulhoward</groupId>
+                    <artifactId>gateway-aeron-cluster</artifactId>
+                    <type>test-jar</type>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>com.paulhoward</groupId>
+                    <artifactId>gateway-tck</artifactId>
+                    <scope>test</scope>
+                </dependency>
+
+                <!-- A real Kafka Connect worker and broker, in process, for the integration test. -->
+                <dependency>
+                    <groupId>org.apache.kafka</groupId>
+                    <artifactId>connect-runtime</artifactId>
+                    <version>${kafka.version}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.kafka</groupId>
+                    <artifactId>connect-runtime</artifactId>
+                    <version>${kafka.version}</version>
+                    <classifier>test</classifier>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.kafka</groupId>
+                    <artifactId>kafka_2.13</artifactId>
+                    <version>${kafka.version}</version>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.kafka</groupId>
+                    <artifactId>kafka_2.13</artifactId>
+                    <version>${kafka.version}</version>
+                    <classifier>test</classifier>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.kafka</groupId>
+                    <artifactId>kafka-clients</artifactId>
+                    <version>${kafka.version}</version>
+                    <classifier>test</classifier>
+                    <scope>test</scope>
+                </dependency>
+                <dependency>
+                    <groupId>org.apache.kafka</groupId>
+                    <artifactId>kafka-server-common</artifactId>
+                    <version>${kafka.version}</version>
+                    <classifier>test</classifier>
+                    <scope>test</scope>
+                </dependency>
+            </dependencies>
+        </profile>
+
+        <!-- Work build (-P aeron-sequencer): bundle the Aeron Sequencer reader instead. -->
+        <profile>
+            <id>aeron-sequencer</id>
+            <properties>
+                <connector.flavour>-aeron-sequencer</connector.flavour>
+            </properties>
+            <dependencies>
+                <dependency>
+                    <groupId>com.paulhoward</groupId>
+                    <artifactId>gateway-aeron-sequencer</artifactId>
+                    <version>${project.version}</version>
+                </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <!-- The connector's integration tests drive an open-source test cluster. -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-surefire-plugin</artifactId>
+                        <configuration>
+                            <excludes>
+                                <exclude>**/*IntegrationTest.java</exclude>
+                            </excludes>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+</project>

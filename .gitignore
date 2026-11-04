@@ -1,0 +1,4 @@
+target/
+# Generated SingleStore root password for the e2e container
+e2e/local/
+.claude/

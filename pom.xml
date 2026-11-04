@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.paulhoward</groupId>
+    <artifactId>aeron-singlestore-direct</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>Aeron sequencer gateway into SingleStore</name>
+    <description>Kafka Connect source connector that streams a sequencer's committed log into SingleStore.</description>
+
+    <developers>
+        <developer>
+            <name>Paul Howard</name>
+        </developer>
+    </developers>
+
+    <modules>
+        <module>gateway-api</module>
+        <module>gateway-tck</module>
+        <module>gateway-aeron-cluster</module>
+        <module>connector</module>
+        <module>e2e</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>17</maven.compiler.release>
+        <!-- Must match the Aeron version of the cluster (or, at work, of the Aeron Sequencer SDK). -->
+        <aeron.version>1.54.0</aeron.version>
+        <!-- The Kafka Connect API that SingleStore Connector Pipelines provide. -->
+        <kafka.version>3.9.1</kafka.version>
+        <slf4j.version>1.7.36</slf4j.version>
+        <junit.version>5.11.4</junit.version>
+        <aeron.test.argLine>--add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/jdk.internal.misc=ALL-UNNAMED</aeron.test.argLine>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.paulhoward</groupId>
+                <artifactId>gateway-api</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.paulhoward</groupId>
+                <artifactId>gateway-tck</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.paulhoward</groupId>
+                <artifactId>gateway-aeron-cluster</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.paulhoward</groupId>
+                <artifactId>gateway-aeron-cluster</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+            <dependency>
+                <groupId>io.aeron</groupId>
+                <artifactId>aeron-cluster</artifactId>
+                <version>${aeron.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.aeron</groupId>
+                <artifactId>aeron-driver</artifactId>
+                <version>${aeron.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.kafka</groupId>
+                <artifactId>connect-api</artifactId>
+                <version>${kafka.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit</groupId>
+                <artifactId>junit-bom</artifactId>
+                <version>${junit.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-clean-plugin</artifactId>
+                    <version>3.5.0</version>
+                    <configuration>
+                        <!--
+                            OneDrive marks folders read-only within seconds of their creation, and from JDK 25
+                            Windows file deletion refuses read-only entries. Without this, clean fails on JDK 25
+                            in a OneDrive folder.
+                        -->
+                        <force>true</force>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.5.2</version>
+                    <configuration>
+                        <argLine>${aeron.test.argLine}</argLine>
+                        <trimStackTrace>false</trimStackTrace>
+                    </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-jar-plugin</artifactId>
+                    <version>3.4.2</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-shade-plugin</artifactId>
+                    <version>3.6.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <profiles>
+        <!--
+            Work build: adds the Aeron Sequencer reader. The module does not exist on the personal
+            machine; it is written at work by following SWITCH-TO-AERON-SEQUENCER.md.
+        -->
+        <profile>
+            <id>aeron-sequencer</id>
+            <modules>
+                <module>gateway-aeron-sequencer</module>
+            </modules>
+        </profile>
+    </profiles>
+</project>
